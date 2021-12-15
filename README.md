@@ -29,3 +29,9 @@
 2、主程序文件是main.py
 
 3、输入一个你需要保存的地址：绝对路径以'/'结尾
+
+## selectPostgresql
+
+### 功能介绍
+
+就是一个链接postGresql自动生成查询sonarqube的脚本
