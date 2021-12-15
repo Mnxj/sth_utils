@@ -1,13 +1,11 @@
 import os
+import re
 import time
 
 import requests
 from bs4 import BeautifulSoup
 
-
-
 URL_TEMPLATE = 'https://m.imitui.com'
-
 payload = {}
 headers = {
     'authority': 'm.imitui.com',
@@ -26,33 +24,42 @@ headers = {
 }
 
 
-def load_images(urls: str, catalog: int):
+def load_images(urls: str, catalog: int, name: str):
     response = requests.request("GET", urls, headers=headers, data=payload)
     soup = BeautifulSoup(response.text, 'html.parser')
     images = soup.findAll('img')[0].get("src")
     p = str(soup.findAll('p')[0].string).split("/")
-    flag = p[0] == p[1]
-    print(images)
-    print(flag)
-    write_images(images, catalog)
+    if p[0] == p[1]:  # 每章节结尾
+        return
+    write_images(images, catalog, name)
     for a in soup.findAll('a'):
-        if flag:
-            if a.string == '下一章' and a['href'].strip() != '':
-                catalog += 1
-                load_images(a['href'], catalog)
-        else:
-            if a.string == '下一页' and a['href'].strip() != '':
-                load_images(URL_TEMPLATE + a['href'], catalog)
+        if a.string == '下一章' and a['href'].strip() != '':
+            catalog += 1
+            load_images(a['href'], catalog, name)
+        if a.string == '下一页' and a['href'].strip() != '':
+            load_images(URL_TEMPLATE + a['href'], catalog, name)
 
 
-def write_images(urls: str, catalog: int):
+def write_images(urls: str, catalog: int, name: str):
+    print(urls)
     time.sleep(1)
-    img = requests.get(urls, headers=headers)
-    path = 'img/' + str(catalog)
+    path = name + str(catalog)
     if not os.path.exists(path):
-        os.mkdir(path)
+        os.makedirs(path)
+
+    img = requests.get(urls, headers=headers)
     with open(path + '/' + str(time.time()) + '.jpg', 'wb') as fd:
         for chunk in img.iter_content():
             fd.write(chunk)
 
 
+def generate(url: str, num: int, name: str):
+    response = requests.request("GET", url, headers=headers, data=payload)
+    soup = BeautifulSoup(str(re.compile(r'<a.*?class=".*?"><span>.*?</span></a>').findall(response.text)),
+                         'html.parser')
+    urls = soup.findAll('a')
+    while num < len(urls):
+        print("start:"+str(num))
+        load_images(urls[num]['href'], num, name)
+        num += 1
+    return num
