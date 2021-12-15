@@ -33,15 +33,16 @@ def load_images(urls: str, catalog: int, name: str):
         return
     write_images(images, catalog, name)
     for a in soup.findAll('a'):
-        if a.string == '下一章' and a['href'].strip() != '':
-            catalog += 1
-            load_images(a['href'], catalog, name)
-        if a.string == '下一页' and a['href'].strip() != '':
-            load_images(URL_TEMPLATE + a['href'], catalog, name)
+        href = a['href'].strip()
+        if href != '':
+            if a.string == '下一章' and str(href).endswith('.html'):
+                catalog += 1
+                load_images(href, catalog, name)
+            if a.string == '下一页':
+                load_images(URL_TEMPLATE + href, catalog, name)
 
 
 def write_images(urls: str, catalog: int, name: str):
-    print(urls)
     time.sleep(1)
     path = name + str(catalog)
     if not os.path.exists(path):
@@ -59,7 +60,7 @@ def generate(url: str, num: int, name: str):
                          'html.parser')
     urls = soup.findAll('a')
     while num < len(urls):
-        print("start:"+str(num))
+        print("start:" + str(num))
         load_images(urls[num]['href'], num, name)
         num += 1
     return num
