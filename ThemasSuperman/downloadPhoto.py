@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import time
 
 import requests
@@ -28,24 +29,24 @@ def load_images(urls: str, catalog: int, name: str):
     if urls.startswith('http'):
         response = requests.request("GET", urls, headers=headers, data=payload)
         soup = BeautifulSoup(response.text, 'html.parser')
-        images = soup.findAll('img')[0].get("src")
+        images = soup.findAll('img')
+        if len(images) < 1:
+            print('该章节没有图片')
+            return
         p = str(soup.findAll('p')[0].string).split("/")
         if p[0] == p[1]:  # 每章节结尾
+            print('本章节结束')
             return
-        write_images(images, catalog, name)
+        write_images(images[0].get("src"), catalog, name)
         for a in soup.findAll('a'):
             href = a['href'].strip()
-            if href != '':
-                if a.string == '下一章' and str(href).endswith('.html'):
-                    catalog += 1
-                    load_images(href, catalog, name)
-                if a.string == '下一页':
-                    load_images(URL_TEMPLATE + href, catalog, name)
+            if a.string == '下一页' and href != '':
+                load_images(URL_TEMPLATE + href, catalog, name)
 
 
 def write_images(urls: str, catalog: int, name: str):
     print(urls)
-    time.sleep(1)
+    time.sleep(0.006)
     path = name + str(catalog)
     if not os.path.exists(path):
         os.makedirs(path)
@@ -57,15 +58,14 @@ def write_images(urls: str, catalog: int, name: str):
 
 
 def generate(url: str, num: int, name: str):
+    sys.setrecursionlimit(100000)
     response = requests.request("GET", url, headers=headers, data=payload)
     if re.compile(r'<center><h1>没有找到指定页面！</h1></center>').findall(response.text):
         print('没有找到指定页面')
-        return
+        return num
     soup = BeautifulSoup(str(re.compile(r'<a.*?class=".*?"><span>.*?</span></a>').findall(response.text)),
                          'html.parser')
     urls = soup.findAll('a')
-    print(response.text)
-
     while num < len(urls):
         print("start:" + str(num))
         if str(urls[num]['href']).startswith("javascript"):
@@ -73,4 +73,4 @@ def generate(url: str, num: int, name: str):
             return num
         load_images(urls[num]['href'], num, name)
         num += 1
-    return num+1
+    return num + 1
